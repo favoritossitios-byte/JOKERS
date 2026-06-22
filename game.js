@@ -5,6 +5,14 @@ const CELL_TYPES = ['normal', 'revive', 'build', 'kill'];
 const DECK_COUNTS = { normal: 40, revive: 4, build: 4, kill: 4 }; // total 52
 const MOVE_STEPS = 3;
 
+// =============================================================
+// EXPERIMENTAL FLAG — ordem alternada dentro do mesmo ciclo.
+// false  => ciclo normal: moveA, pickA, moveB, pickB, ...
+// true   => ciclo alternado: moveA, moveB, pickA, pickB, ... (próximo ciclo começa B)
+// Para fazer rollback: pôr a `false` (não é preciso mexer em mais nada).
+// =============================================================
+const INTERLEAVED_ORDER = true;
+
 const PHASES = {
   PLACE: 'place',           // primeiro jogador coloca, depois o segundo
   MOVE: 'move',             // jogador anda 3 passos
@@ -219,7 +227,28 @@ function applyMoveStep(state, x, y) {
   state.jokers[p] = { x, y };
   state.moveStepsRemaining--;
   if (state.moveStepsRemaining === 0) {
-    state.phase = PHASES.PICK;
+    if (INTERLEAVED_ORDER && state.currentPlayer === state.cycleMover) {
+      // primeiro a andar terminou; agora anda o outro player, depois é que se faz pick
+      const other = state.currentPlayer === 1 ? 2 : 1;
+      // Se o outro não consegue andar de todo, ele perde já aqui.
+      if (!canMoveAtAll(state, other)) {
+        // o atual ainda consegue (acabou de andar), portanto o outro perde
+        state.phase = PHASES.GAME_OVER;
+        state.winner = state.currentPlayer;
+        return state;
+      }
+      state.currentPlayer = other;
+      state.moveStepsRemaining = MOVE_STEPS;
+      state.moveStartPos = { ...state.jokers[other] };
+      // mantém-se phase = MOVE
+    } else {
+      // modo normal, OU já é o segundo a andar no modo interleaved -> agora picks
+      if (INTERLEAVED_ORDER) {
+        // segundo a andar terminou; o pick começa pelo cycleMover (primeiro do ciclo)
+        state.currentPlayer = state.cycleMover;
+      }
+      state.phase = PHASES.PICK;
+    }
   }
   return state;
 }
@@ -383,8 +412,20 @@ function applyKillSecond(state, x, y) {
 // ------------------------------------------------------------
 function endPickPhase(state) {
   state.turn++;
-  // Próximo a jogar é o OUTRO player. O ciclo continua até alguém não conseguir andar.
-  const next = state.currentPlayer === 1 ? 2 : 1;
+
+  if (INTERLEAVED_ORDER && state.currentPlayer === state.cycleMover) {
+    // primeiro do ciclo acabou de pickar; agora pick do segundo (mesmo ciclo, sem nova fase de move)
+    const other = state.currentPlayer === 1 ? 2 : 1;
+    state.currentPlayer = other;
+    state.phase = PHASES.PICK;
+    return;
+  }
+
+  // Próximo ciclo. Em modo normal: começa o outro player (do que acabou de jogar).
+  //                 Em modo interleaved: alterna o cycleMover.
+  const nextCycleMover = INTERLEAVED_ORDER
+    ? (state.cycleMover === 1 ? 2 : 1)
+    : (state.currentPlayer === 1 ? 2 : 1);
 
   // Antes do próximo move, verificar: ambos os players ainda conseguem andar?
   const p1Can = canMoveAtAll(state, 1);
@@ -398,10 +439,11 @@ function endPickPhase(state) {
   if (!p1Can) { state.phase = PHASES.GAME_OVER; state.winner = 2; return; }
   if (!p2Can) { state.phase = PHASES.GAME_OVER; state.winner = 1; return; }
 
-  state.currentPlayer = next;
+  state.cycleMover = nextCycleMover;
+  state.currentPlayer = nextCycleMover;
   state.phase = PHASES.MOVE;
   state.moveStepsRemaining = MOVE_STEPS;
-  state.moveStartPos = { ...state.jokers[next] };
+  state.moveStartPos = { ...state.jokers[nextCycleMover] };
 }
 
 // ------------------------------------------------------------
