@@ -10,17 +10,28 @@
     '🙂','😎','🤠','🥸','🤓','😈','👻','🤖','👽','👹','👺','🤡',
     '🧙','🧛','🧞','🧜','🧚','🦸','🦹','🥷','👑','💀','🤺','🧝',
     '🐱','🐶','🦊','🦁','🐯','🐸','🐼','🐵','🦄','🐲','🦖','🐙',
-    '🍕','🍔','🌮','🍩','🍦','🌶️','🥑','🍄','🦴','💎','⚡','🔥',
   ];
-  const BOT_EMOJI_IDX = EMOJIS.indexOf('🤖');           // 7
-  const HUMAN_DEFAULTS = { 1: EMOJIS.indexOf('🙂'), 2: EMOJIS.indexOf('😎') };
+  const BOT_EMOJI_IDX = EMOJIS.indexOf('🤖');
+
+  // Pick a random emoji index, avoiding the bot one (so humans get a face/animal/etc.)
+  // and avoiding `exclude` (so P1 and P2 don't share the same emoji).
+  function randomHumanEmojiIdx(exclude = -1) {
+    const candidates = EMOJIS.map((_, i) => i)
+      .filter(i => i !== BOT_EMOJI_IDX && i !== exclude);
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  // Initial emoji per player follows its starting type: bots get 🤖, humans get a
+  // random non-bot emoji (and the two random picks never collide).
+  const initialP1Idx = randomHumanEmojiIdx();
+  const initialP2Idx = BOT_EMOJI_IDX; // P2 starts as bot
 
   // ============================================================
   // State
   // ============================================================
   const ui = {
-    p1: { emojiIdx: HUMAN_DEFAULTS[1], type: 'human', customEmoji: false },
-    p2: { emojiIdx: BOT_EMOJI_IDX,    type: 'bot',   customEmoji: false },
+    p1: { emojiIdx: initialP1Idx, type: 'human', customEmoji: false },
+    p2: { emojiIdx: initialP2Idx, type: 'bot',   customEmoji: false },
     mode: 1,
     theme: 'normal',
     botDepth: 3,
@@ -112,9 +123,16 @@
         const newType = btn.dataset.type;
         const slot = ui[`p${p}`];
         slot.type = newType;
-        // Auto-pick a sensible default emoji while the user hasn't picked one manually
+        // Auto-pick a sensible default emoji while the user hasn't picked one manually.
+        // Switching to bot → 🤖; switching to human → fresh random emoji different
+        // from the other player's current choice.
         if (!slot.customEmoji) {
-          slot.emojiIdx = newType === 'bot' ? BOT_EMOJI_IDX : HUMAN_DEFAULTS[p];
+          if (newType === 'bot') {
+            slot.emojiIdx = BOT_EMOJI_IDX;
+          } else {
+            const otherKey = p === '1' ? 'p2' : 'p1';
+            slot.emojiIdx = randomHumanEmojiIdx(ui[otherKey].emojiIdx);
+          }
           const el = $(`.emoji-display[data-player="${p}"]`);
           el.textContent = EMOJIS[slot.emojiIdx];
           el.classList.remove('swap-left', 'swap-right');
