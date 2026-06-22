@@ -7,49 +7,109 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>🃏 Joker Hop</h1>
-    <div class="controls">
-      <label>P1:
-        <select id="p1-type">
-          <option value="human" selected>Humano</option>
-          <option value="bot">Bot</option>
-        </select>
-      </label>
-      <label>P2:
-        <select id="p2-type">
-          <option value="human">Humano</option>
-          <option value="bot" selected>Bot</option>
-        </select>
-      </label>
-      <label>Bot depth:
-        <input type="number" id="bot-depth" value="3" min="1" max="6" />
-      </label>
-      <button id="new-game">Novo Jogo</button>
+  <!-- ====================== SETUP SCREEN ====================== -->
+  <section id="setup-screen" class="screen active">
+    <div class="setup-bg-orbs">
+      <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
     </div>
-  </header>
 
-  <main>
-    <div id="status" class="status"></div>
-    <div id="board-wrap">
-      <div id="board"></div>
+    <h1 class="title">
+      <span class="title-emoji">🃏</span>
+      <span class="title-text">Joker Hop</span>
+    </h1>
+
+    <div class="players-row">
+      <!-- Player 1 -->
+      <div class="player-card" data-player="1">
+        <div class="player-label">Jogador 1</div>
+        <div class="emoji-picker">
+          <button class="arrow left" data-dir="-1" data-player="1" aria-label="anterior">‹</button>
+          <div class="emoji-stage">
+            <span class="emoji-display" data-player="1">🙂</span>
+          </div>
+          <button class="arrow right" data-dir="1" data-player="1" aria-label="seguinte">›</button>
+        </div>
+        <div class="type-toggle" data-player="1">
+          <button class="toggle-btn active" data-type="human">🧠 Humano</button>
+          <button class="toggle-btn" data-type="bot">🤖 Bot</button>
+        </div>
+      </div>
+
+      <div class="vs">VS</div>
+
+      <!-- Player 2 -->
+      <div class="player-card" data-player="2">
+        <div class="player-label">Jogador 2</div>
+        <div class="emoji-picker">
+          <button class="arrow left" data-dir="-1" data-player="2" aria-label="anterior">‹</button>
+          <div class="emoji-stage">
+            <span class="emoji-display" data-player="2">😎</span>
+          </div>
+          <button class="arrow right" data-dir="1" data-player="2" aria-label="seguinte">›</button>
+        </div>
+        <div class="type-toggle" data-player="2">
+          <button class="toggle-btn" data-type="human">🧠 Humano</button>
+          <button class="toggle-btn active" data-type="bot">🤖 Bot</button>
+        </div>
+      </div>
     </div>
-    <aside id="log-panel">
-      <h3>Log</h3>
+
+    <div class="mode-row">
+      <button class="mode-btn active" data-mode="1">
+        <span class="mode-num">1</span>
+        <span class="mode-name">Clássico</span>
+      </button>
+      <button class="mode-btn locked" data-mode="2" disabled>
+        <span class="mode-num">2</span>
+        <span class="mode-name">Em breve</span>
+        <span class="lock">🔒</span>
+      </button>
+      <button class="mode-btn locked" data-mode="3" disabled>
+        <span class="mode-num">3</span>
+        <span class="mode-name">Em breve</span>
+        <span class="lock">🔒</span>
+      </button>
+    </div>
+
+    <button id="start-btn" class="start-btn">
+      <span>JOGAR</span>
+      <span class="arrow-icon">→</span>
+    </button>
+  </section>
+
+  <!-- ====================== GAME SCREEN ====================== -->
+  <section id="game-screen" class="screen">
+    <header class="game-header">
+      <button id="back-btn" class="ghost-btn" title="Voltar ao menu">‹</button>
+      <div id="status" class="status-bar"></div>
+      <button id="log-toggle" class="ghost-btn" title="Mostrar/esconder log">📜</button>
+    </header>
+
+    <div class="board-area">
+      <div id="board-wrap">
+        <div id="board"></div>
+      </div>
+    </div>
+
+    <aside id="log-panel" class="hidden">
+      <h3>Histórico</h3>
       <ul id="log"></ul>
     </aside>
-  </main>
 
-  <section class="legend">
-    <h3>Legenda</h3>
-    <ul>
-      <li><span class="chip normal"></span> Normal (40/52)</li>
-      <li><span class="chip revive"></span> Ressuscitar (4/52) — vira de novo uma carta para cima</li>
-      <li><span class="chip build"></span> Construir (4/52) — adiciona 2 cartas ao tabuleiro</li>
-      <li><span class="chip kill"></span> Mortal (4/52) — vira mais uma carta para baixo</li>
-      <li><span class="chip flipped"></span> Virada para baixo (intransponível)</li>
-    </ul>
-    <p><strong>Regras:</strong> Cada turno, o jogador anda exatamente 3 passos (cima/baixo/esq/dir, sem diagonal, sem passar por cima do adversário nem sair do tabuleiro) e depois remove uma carta à sua escolha. Cartas especiais ativam efeitos. Quem não conseguir andar perde. Se nenhum conseguir, empate.</p>
+    <div id="fx-layer" class="fx-layer"></div>
+
+    <!-- Game over overlay -->
+    <div id="gameover-overlay" class="overlay hidden">
+      <div class="overlay-card">
+        <div id="gameover-emoji" class="gameover-emoji">🎉</div>
+        <h2 id="gameover-title">Vitória!</h2>
+        <p id="gameover-sub"></p>
+        <div class="overlay-actions">
+          <button id="play-again" class="start-btn small">Outra vez</button>
+          <button id="to-menu" class="ghost-btn">Menu</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <script src="game.js"></script>
