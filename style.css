@@ -91,10 +91,14 @@ html, body {
   height: 100%;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--text);
-  overflow: hidden;
   background: var(--bg-gradient);
   transition: background 0.6s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
+/* Setup screen scrolls if it overflows on small phones; game screen doesn't */
+body { overflow-x: hidden; overflow-y: auto; }
+body.in-game { overflow: hidden; }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 button:focus-visible { outline: 2px solid var(--accent-p1); outline-offset: 2px; }
@@ -111,17 +115,31 @@ button:focus-visible { outline: 2px solid var(--accent-p1); outline-offset: 2px;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.4s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 .screen.active { display: flex; opacity: 1; }
+/* Game screen never scrolls — board area handles its own overflow */
+#game-screen { overflow: hidden; }
 
 /* ============================================================
    Setup Screen
    ============================================================ */
 #setup-screen {
-  gap: 36px;
-  padding: 20px;
+  gap: 28px;
+  padding: 30px 16px 60px;
+  padding-bottom: max(60px, env(safe-area-inset-bottom));
+  padding-top: max(30px, env(safe-area-inset-top));
   position: relative;
-  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+  min-height: 100%;
+}
+/* On shorter viewports the setup content overflows; start from the top
+   so nothing gets clipped above. */
+@media (max-height: 760px) {
+  #setup-screen { justify-content: flex-start; }
 }
 
 .setup-bg-orbs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
@@ -441,6 +459,9 @@ button:focus-visible { outline: 2px solid var(--accent-p1); outline-offset: 2px;
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
   background: rgba(10, 10, 31, 0.6);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--glass-border);
@@ -776,14 +797,154 @@ button:focus-visible { outline: 2px solid var(--accent-p1); outline-offset: 2px;
   100% { transform: translateY(120vh) rotate(720deg); opacity: 0.6; }
 }
 
-/* responsive */
-@media (max-width: 720px) {
+/* ============================================================
+   Responsive — tablet
+   ============================================================ */
+@media (max-width: 900px) {
+  :root { --cell-size: 64px; }
+  .title { font-size: clamp(2rem, 8vw, 3rem); }
+  .players-row { gap: 14px; }
+  .vs { font-size: 1.1rem; letter-spacing: 2px; }
+  .player-card { padding: 16px 18px; min-width: 0; gap: 12px; }
+  .emoji-stage { width: 84px; height: 84px; }
+  .emoji-display { font-size: 3.2rem; }
+}
+
+/* ============================================================
+   Responsive — phone
+   Goal: every interactive element ≥44px touch target, board fits
+   without horizontal scroll, no clipped content anywhere.
+   ============================================================ */
+@media (max-width: 600px) {
   :root { --cell-size: 56px; }
-  .players-row { gap: 16px; }
-  .player-card { min-width: 0; padding: 18px 20px; }
-  .emoji-stage { width: 80px; height: 80px; }
-  .emoji-display { font-size: 3rem; }
-  #log-panel { width: calc(100% - 24px); }
+
+  /* Setup */
+  #setup-screen { gap: 22px; padding: 20px 12px 50px; }
+  .title { font-size: 2rem; gap: 8px; }
+  .title-emoji { font-size: 2.2rem; }
+
+  .players-row {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .vs {
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    padding: 4px 14px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 100px;
+  }
+  .player-card {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .player-card[data-player="1"] { border-top: none; border-left: 3px solid var(--accent-p1); }
+  .player-card[data-player="2"] { border-top: none; border-left: 3px solid var(--accent-p2); }
+  .player-label {
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    flex-basis: 100%;
+    text-align: center;
+    margin-bottom: -4px;
+  }
+  .emoji-picker { gap: 8px; }
+  .arrow { width: 44px; height: 44px; font-size: 1.5rem; }
+  .emoji-stage { width: 72px; height: 72px; }
+  .emoji-display { font-size: 2.8rem; }
+  .type-toggle { padding: 3px; }
+  .toggle-btn { padding: 10px 14px; font-size: 0.8rem; min-height: 36px; }
+
+  .mode-row { flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .mode-btn { padding: 10px 16px; min-width: 76px; min-height: 56px; }
+  .mode-btn .mode-num { font-size: 1.2rem; }
+  .mode-btn .mode-name { font-size: 0.65rem; }
+
+  .theme-row { gap: 6px; padding: 0 4px; }
+  .theme-btn { min-width: 64px; padding: 6px 8px 8px; }
+  .theme-swatch { width: 42px; height: 22px; }
+  .theme-name { font-size: 0.68rem; }
+
+  .start-btn {
+    padding: 16px 38px;
+    font-size: 1.05rem;
+    width: calc(100% - 24px);
+    max-width: 320px;
+    justify-content: center;
+  }
+  .sound-row { width: 100%; max-width: 320px; }
+  .sound-btn { flex: 1; padding: 12px 12px; min-height: 44px; }
+
+  /* Game header — make tap targets bigger and status text smaller */
+  .game-header { padding: 10px 12px; gap: 8px; }
+  .ghost-btn { width: 44px; height: 44px; border-radius: 12px; font-size: 1.2rem; flex-shrink: 0; }
+  .status-bar { font-size: 0.85rem; }
+  .status-bar .pill { padding: 2px 7px; font-size: 0.75rem; margin-right: 5px; }
+
+  /* Board area: shrink cells to fit viewport so no horizontal scroll */
+  .board-area { padding: 14px 8px; }
+  .cell { border-radius: 8px; }
+  .cell.flipped::after { font-size: 1.4rem; }
+  .cell.normal::after, .cell.revive::after, .cell.build::after, .cell.kill::after {
+    font-size: 1.1rem;
+  }
+  .joker { font-size: 1.8rem; }
+
+  /* Log panel becomes a bottom sheet on phones */
+  #log-panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 50vh;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+    transform: translateY(0);
+  }
+  #log-panel.hidden { transform: translateY(110%); }
+
+  /* Game-over overlay card narrower */
+  .overlay-card { padding: 28px 24px; margin: 12px; max-width: calc(100vw - 24px); }
+  .overlay-card h2 { font-size: 1.7rem; }
+  .gameover-emoji { font-size: 4rem; }
+  .overlay-actions { flex-direction: column; width: 100%; }
+  .overlay-actions .start-btn,
+  .overlay-actions .ghost-btn { width: 100%; min-height: 48px; }
+  .overlay-actions .ghost-btn { padding: 0 16px; font-size: 1rem; }
+
+  /* Combo counter smaller */
+  .combo-counter { font-size: 1.5rem; top: 70px; }
+  .fx-text { font-size: 1.4rem; }
+  .fx-text.big { font-size: 2rem; }
+
+  /* Reduce orb blur on phones (perf) */
+  .orb { filter: blur(50px); opacity: 0.4; }
+  .o1 { width: 240px; height: 240px; }
+  .o2 { width: 220px; height: 220px; }
+  .o3 { width: 200px; height: 200px; }
+}
+
+/* Tiny phones — go even smaller on the board */
+@media (max-width: 380px) {
+  :root { --cell-size: 48px; }
+  .joker { font-size: 1.5rem; }
+  .title { font-size: 1.7rem; }
+}
+
+/* Landscape phones — keep game playable */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root { --cell-size: 44px; }
+  .game-header { padding: 6px 10px; }
+  .board-area { padding: 6px; }
+  .joker { font-size: 1.4rem; }
 }
 
 /* ============================================================

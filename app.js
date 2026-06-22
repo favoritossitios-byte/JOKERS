@@ -12,13 +12,15 @@
     '🐱','🐶','🦊','🦁','🐯','🐸','🐼','🐵','🦄','🐲','🦖','🐙',
     '🍕','🍔','🌮','🍩','🍦','🌶️','🥑','🍄','🦴','💎','⚡','🔥',
   ];
+  const BOT_EMOJI_IDX = EMOJIS.indexOf('🤖');           // 7
+  const HUMAN_DEFAULTS = { 1: EMOJIS.indexOf('🙂'), 2: EMOJIS.indexOf('😎') };
 
   // ============================================================
   // State
   // ============================================================
   const ui = {
-    p1: { emojiIdx: 0, type: 'human' },
-    p2: { emojiIdx: 1, type: 'bot' },
+    p1: { emojiIdx: HUMAN_DEFAULTS[1], type: 'human', customEmoji: false },
+    p2: { emojiIdx: BOT_EMOJI_IDX,    type: 'bot',   customEmoji: false },
     mode: 1,
     theme: 'normal',
     botDepth: 3,
@@ -83,10 +85,11 @@
   function cycleEmoji(playerKey, dir) {
     const p = ui[playerKey];
     p.emojiIdx = (p.emojiIdx + dir + EMOJIS.length) % EMOJIS.length;
+    p.customEmoji = true;             // user has now manually chosen — stop auto-syncing with type toggle
     const el = $(`.emoji-display[data-player="${playerKey.slice(1)}"]`);
     el.textContent = EMOJIS[p.emojiIdx];
     el.classList.remove('swap-left', 'swap-right');
-    void el.offsetWidth; // restart animation
+    void el.offsetWidth;
     el.classList.add(dir > 0 ? 'swap-right' : 'swap-left');
   }
 
@@ -106,7 +109,18 @@
         safeSfx(SFX.click);
         toggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        ui[`p${p}`].type = btn.dataset.type;
+        const newType = btn.dataset.type;
+        const slot = ui[`p${p}`];
+        slot.type = newType;
+        // Auto-pick a sensible default emoji while the user hasn't picked one manually
+        if (!slot.customEmoji) {
+          slot.emojiIdx = newType === 'bot' ? BOT_EMOJI_IDX : HUMAN_DEFAULTS[p];
+          const el = $(`.emoji-display[data-player="${p}"]`);
+          el.textContent = EMOJIS[slot.emojiIdx];
+          el.classList.remove('swap-left', 'swap-right');
+          void el.offsetWidth;
+          el.classList.add(newType === 'bot' ? 'swap-right' : 'swap-left');
+        }
       });
     });
   });
@@ -186,11 +200,26 @@
   function switchScreen(name) {
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[name].classList.add('active');
+    document.body.classList.toggle('in-game', name === 'game');
+    // when entering the game screen, render after the layout has settled so
+    // boardArea.clientWidth/Height reflect the real viewport
+    if (name === 'game' && state) requestAnimationFrame(() => render());
   }
 
   paintEmojis();
   updateSfxButtonsUI();
   applyTheme(ui.theme);
+
+  // Re-render on resize/orientation change so the board fits the new viewport
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (!state) return;
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => render(), 80);
+  });
+  window.addEventListener('orientationchange', () => {
+    if (state) setTimeout(() => render(), 200);
+  });
 
   // ============================================================
   // Game flow
@@ -257,6 +286,26 @@
       if (t.y > bMaxY) bMaxY = t.y;
     }
     const cols = bMaxX - bMinX + 1;
+    const rows = bMaxY - bMinY + 1;
+
+    // Dynamically pick a cell size so the board always fits the viewport.
+    // The CSS sets a default --cell-size via media queries; we tighten it
+    // further whenever the board is wider/taller than the available space.
+    const boardArea = document.querySelector('.board-area');
+    if (boardArea) {
+      const padX = 32; // horizontal padding+margin allowance
+      const padY = 48;
+      const availW = boardArea.clientWidth - padX;
+      const availH = boardArea.clientHeight - padY;
+      const gap = 6;
+      // CSS default cell size — keep as upper bound
+      const cssVar = getComputedStyle(document.documentElement).getPropertyValue('--cell-size').trim();
+      const cssDefault = parseFloat(cssVar) || 78;
+      const maxByW = Math.floor((availW - gap * (cols - 1)) / cols);
+      const maxByH = Math.floor((availH - gap * (rows - 1)) / rows);
+      const size = Math.max(28, Math.min(cssDefault, maxByW, maxByH));
+      $board.style.setProperty('--cell-size', size + 'px');
+    }
     $board.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size))`;
     $board.innerHTML = '';
 
