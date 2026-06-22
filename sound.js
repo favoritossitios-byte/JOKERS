@@ -8,6 +8,62 @@
   let enabled = true;
   let musicEnabled = false;
   let musicLoop = null;
+  let currentTheme = 'normal';
+
+  // ============================================================
+  // Theme palettes — per-theme tweaks to wave shape, pitch, filter.
+  // pitchMul scales every frequency; waveMap remaps wave types.
+  // ============================================================
+  const THEMES = {
+    normal: {
+      pitchMul: 1.0,
+      waveMap: { sine: 'sine', triangle: 'triangle', square: 'square', sawtooth: 'sawtooth' },
+      noiseFilterMul: 1.0,
+      reverb: 0.0,
+      musicScale: [262, 311, 392, 466, 262, 311, 392, 466, 247, 294, 370, 440, 247, 294, 370, 440],
+      musicWave: 'sine',
+    },
+    jungle: {
+      // warm + organic — favour triangles/sines, drop pitch a touch, mellow filter
+      pitchMul: 0.92,
+      waveMap: { sine: 'sine', triangle: 'triangle', square: 'triangle', sawtooth: 'triangle' },
+      noiseFilterMul: 0.7,
+      reverb: 0.15,
+      musicScale: [220, 277, 330, 415, 220, 277, 330, 415, 196, 247, 294, 370, 196, 247, 294, 370],
+      musicWave: 'triangle',
+    },
+    ocean: {
+      // wet + soft — heavy lowpass on noise, slower transients, pure sines
+      pitchMul: 0.85,
+      waveMap: { sine: 'sine', triangle: 'sine', square: 'sine', sawtooth: 'triangle' },
+      noiseFilterMul: 0.5,
+      reverb: 0.3,
+      musicScale: [196, 233, 294, 349, 196, 233, 294, 349, 175, 220, 262, 311, 175, 220, 262, 311],
+      musicWave: 'sine',
+    },
+    desert: {
+      // dry + bright — sharper waves, higher filter, slight pitch up
+      pitchMul: 1.08,
+      waveMap: { sine: 'triangle', triangle: 'triangle', square: 'square', sawtooth: 'sawtooth' },
+      noiseFilterMul: 1.4,
+      reverb: 0.02,
+      musicScale: [294, 349, 440, 523, 294, 349, 440, 523, 277, 330, 415, 494, 277, 330, 415, 494],
+      musicWave: 'triangle',
+    },
+    lava: {
+      // aggressive — heavy sawtooths, distorted noise, lower pitch
+      pitchMul: 0.78,
+      waveMap: { sine: 'sawtooth', triangle: 'sawtooth', square: 'square', sawtooth: 'sawtooth' },
+      noiseFilterMul: 1.8,
+      reverb: 0.05,
+      musicScale: [110, 139, 165, 208, 110, 139, 165, 208, 98, 117, 147, 175, 98, 117, 147, 175],
+      musicWave: 'sawtooth',
+    },
+  };
+
+  function theme() { return THEMES[currentTheme] || THEMES.normal; }
+  function p(freq) { return Math.max(20, freq * theme().pitchMul); }
+  function w(type) { return theme().waveMap[type] || type; }
 
   function ensureCtx() {
     if (ctx) return ctx;
@@ -28,16 +84,6 @@
 
   function now() { return ctx ? ctx.currentTime : 0; }
 
-  function envGain(start, peak, sustain, release, peakTime = 0.005, releaseTime = 0.15) {
-    const g = ctx.createGain();
-    const t = now();
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(peak, t + peakTime);
-    g.gain.linearRampToValueAtTime(sustain, t + peakTime + 0.04);
-    g.gain.linearRampToValueAtTime(0, t + peakTime + 0.04 + releaseTime);
-    return g;
-  }
-
   function tone(opts) {
     if (!enabled) return;
     if (!ensureCtx()) return;
@@ -47,11 +93,11 @@
       detune = 0,
     } = opts;
     const osc = ctx.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, now());
+    osc.type = w(type);
+    osc.frequency.setValueAtTime(p(freq), now());
     osc.detune.value = detune;
     if (slideTo) {
-      osc.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), now() + (slideTime || dur));
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, p(slideTo)), now() + (slideTime || dur));
     }
     const g = ctx.createGain();
     g.gain.setValueAtTime(0, now());
@@ -76,7 +122,7 @@
     src.buffer = buffer;
     const f = ctx.createBiquadFilter();
     f.type = filter;
-    f.frequency.value = freq;
+    f.frequency.value = Math.max(80, freq * theme().noiseFilterMul);
     f.Q.value = q;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0, now());
@@ -155,18 +201,14 @@
     if (!ensureCtx()) return;
     if (musicLoop) return;
     musicEnabled = true;
-    const pattern = [
-      262, 311, 392, 466,
-      262, 311, 392, 466,
-      247, 294, 370, 440,
-      247, 294, 370, 440,
-    ];
     let idx = 0;
     const playNote = () => {
       if (!musicEnabled) return;
+      const th = theme();
+      const pattern = th.musicScale;
       const f = pattern[idx % pattern.length];
       const osc = ctx.createOscillator();
-      osc.type = 'sine';
+      osc.type = th.musicWave;
       osc.frequency.value = f;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, now());
@@ -174,7 +216,6 @@
       g.gain.exponentialRampToValueAtTime(0.001, now() + 0.35);
       osc.connect(g); g.connect(musicGain);
       osc.start(now()); osc.stop(now() + 0.4);
-      // bass once per bar
       if (idx % 4 === 0) {
         const b = ctx.createOscillator();
         b.type = 'triangle';
@@ -209,5 +250,9 @@
     if (masterGain) masterGain.gain.value = enabled ? Math.max(0, Math.min(1, v)) : 0;
   }
 
-  window.SFX = { ...SFX, setEnabled, setMusicEnabled, setVolume, get enabled() { return enabled; }, get musicEnabled() { return musicEnabled; } };
+  function setTheme(name) {
+    if (THEMES[name]) currentTheme = name;
+  }
+
+  window.SFX = { ...SFX, setEnabled, setMusicEnabled, setVolume, setTheme, get enabled() { return enabled; }, get musicEnabled() { return musicEnabled; }, get theme() { return currentTheme; } };
 })();

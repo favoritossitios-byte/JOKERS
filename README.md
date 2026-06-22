@@ -2,7 +2,13 @@
 
 Um jogo de tabuleiro 4×4 (expansível) para 2 jogadores — humano vs humano, humano vs bot, ou bot vs bot. O bot usa **minimax com alpha-beta pruning**.
 
-## Como jogar
+## 🎮 Joga online
+
+**→ https://favoritossitios-byte.github.io/JOKERS/**
+
+(Deploy automático via GitHub Actions a cada push para `main`. Para ativar pela primeira vez: vai a Settings → Pages → Source → "GitHub Actions".)
+
+## Como jogar localmente
 
 Abre `index.html` no browser. Não precisa de servidor.
 

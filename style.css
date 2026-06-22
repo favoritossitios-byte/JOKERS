@@ -18,6 +18,71 @@
   --text-dim: #9a9ab8;
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
   --cell-size: 78px;
+
+  /* Per-theme card gradients (overridden by body.theme-*) */
+  --cell-normal: linear-gradient(135deg, #4a90ff, #2563eb);
+  --cell-revive: linear-gradient(135deg, #ff8fb9, #d63384);
+  --cell-build:  linear-gradient(135deg, #4ade80, #16a34a);
+  --cell-kill:   linear-gradient(135deg, #ff6b6b, #c92020);
+  --cell-flipped-pattern: repeating-linear-gradient(45deg, #1f1f3a 0 8px, #2a2a4a 8px 16px);
+  --bg-gradient: radial-gradient(ellipse at top, var(--bg-2), var(--bg-0));
+}
+
+/* ============================================================
+   Themes — change cell colors + background + accents.
+   The sound module reads `document.body.dataset.theme` separately.
+   ============================================================ */
+body.theme-jungle {
+  --bg-0: #06140a;
+  --bg-1: #0e2b15;
+  --bg-2: #14401f;
+  --cell-normal: linear-gradient(135deg, #84cc16, #4d7c0f);
+  --cell-revive: linear-gradient(135deg, #fde047, #d97706);
+  --cell-build:  linear-gradient(135deg, #6ee7b7, #047857);
+  --cell-kill:   linear-gradient(135deg, #a16207, #422006);
+  --cell-flipped-pattern: repeating-linear-gradient(45deg, #1a3a1a 0 8px, #254a25 8px 16px);
+  --bg-gradient: radial-gradient(ellipse at top, #14401f, #06140a);
+  --accent-p1: #fde047;
+  --accent-p2: #6ee7b7;
+}
+body.theme-ocean {
+  --bg-0: #03182b;
+  --bg-1: #0a2540;
+  --bg-2: #0f3a5c;
+  --cell-normal: linear-gradient(135deg, #38bdf8, #0369a1);
+  --cell-revive: linear-gradient(135deg, #f0abfc, #a21caf);
+  --cell-build:  linear-gradient(135deg, #5eead4, #0d9488);
+  --cell-kill:   linear-gradient(135deg, #f87171, #581717);
+  --cell-flipped-pattern: repeating-linear-gradient(45deg, #0a2540 0 8px, #143656 8px 16px);
+  --bg-gradient: radial-gradient(ellipse at top, #0f3a5c, #03182b);
+  --accent-p1: #fde047;
+  --accent-p2: #5eead4;
+}
+body.theme-desert {
+  --bg-0: #2a1c0a;
+  --bg-1: #4a2e10;
+  --bg-2: #6b4419;
+  --cell-normal: linear-gradient(135deg, #fcd34d, #b45309);
+  --cell-revive: linear-gradient(135deg, #fb7185, #be123c);
+  --cell-build:  linear-gradient(135deg, #a3e635, #4d7c0f);
+  --cell-kill:   linear-gradient(135deg, #ea580c, #7c2d12);
+  --cell-flipped-pattern: repeating-linear-gradient(45deg, #5a3a18 0 8px, #6e4a20 8px 16px);
+  --bg-gradient: radial-gradient(ellipse at top, #6b4419, #2a1c0a);
+  --accent-p1: #fcd34d;
+  --accent-p2: #fb923c;
+}
+body.theme-lava {
+  --bg-0: #0a0303;
+  --bg-1: #2a0808;
+  --bg-2: #471010;
+  --cell-normal: linear-gradient(135deg, #ef4444, #7f1d1d);
+  --cell-revive: linear-gradient(135deg, #fbbf24, #b45309);
+  --cell-build:  linear-gradient(135deg, #f97316, #7c2d12);
+  --cell-kill:   linear-gradient(135deg, #18181b, #000000);
+  --cell-flipped-pattern: repeating-linear-gradient(45deg, #1a0606 0 8px, #2b0e0e 8px 16px);
+  --bg-gradient: radial-gradient(ellipse at top, #471010, #0a0303);
+  --accent-p1: #fbbf24;
+  --accent-p2: #ef4444;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +92,8 @@ html, body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--text);
   overflow: hidden;
-  background: radial-gradient(ellipse at top, var(--bg-2), var(--bg-0));
+  background: var(--bg-gradient);
+  transition: background 0.6s ease;
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
@@ -267,6 +333,77 @@ button:focus-visible { outline: 2px solid var(--accent-p1); outline-offset: 2px;
 .mode-btn.locked { opacity: 0.4; cursor: not-allowed; }
 .mode-btn .lock { position: absolute; top: 4px; right: 6px; font-size: 0.7rem; }
 
+/* ============================================================
+   Theme picker
+   ============================================================ */
+.theme-row {
+  display: flex;
+  gap: 10px;
+  z-index: 1;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: rise-in 0.7s 0.25s both cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.theme-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 10px;
+  border-radius: 14px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s;
+  min-width: 78px;
+}
+.theme-btn:hover { transform: translateY(-2px); border-color: var(--accent-p1); }
+.theme-btn.active {
+  border-color: var(--accent-p1);
+  box-shadow: 0 0 16px rgba(255, 214, 10, 0.35);
+  background: rgba(255, 214, 10, 0.08);
+}
+.theme-name { font-size: 0.75rem; color: var(--text-dim); font-weight: 600; }
+.theme-btn.active .theme-name { color: var(--text); }
+.theme-swatch {
+  width: 52px; height: 28px; border-radius: 6px;
+  position: relative; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+}
+.theme-swatch::before, .theme-swatch::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 25%;
+}
+.theme-swatch::before { left: 25%; }
+.theme-swatch::after  { left: 50%; }
+.theme-swatch > i {
+  position: absolute; top: 0; bottom: 0; left: 75%; width: 25%;
+  display: block;
+}
+/* per-swatch palettes (4 thin stripes = normal/revive/build/kill) */
+.swatch-normal { background: linear-gradient(135deg, #4a90ff, #2563eb); }
+.swatch-normal::before { background: linear-gradient(135deg, #ff8fb9, #d63384); }
+.swatch-normal::after  { background: linear-gradient(135deg, #4ade80, #16a34a); }
+.swatch-normal > i      { background: linear-gradient(135deg, #ff6b6b, #c92020); }
+
+.swatch-jungle { background: linear-gradient(135deg, #84cc16, #4d7c0f); }
+.swatch-jungle::before { background: linear-gradient(135deg, #fde047, #d97706); }
+.swatch-jungle::after  { background: linear-gradient(135deg, #6ee7b7, #047857); }
+.swatch-jungle > i      { background: linear-gradient(135deg, #a16207, #422006); }
+
+.swatch-ocean { background: linear-gradient(135deg, #38bdf8, #0369a1); }
+.swatch-ocean::before { background: linear-gradient(135deg, #f0abfc, #a21caf); }
+.swatch-ocean::after  { background: linear-gradient(135deg, #5eead4, #0d9488); }
+.swatch-ocean > i      { background: linear-gradient(135deg, #f87171, #581717); }
+
+.swatch-desert { background: linear-gradient(135deg, #fcd34d, #b45309); }
+.swatch-desert::before { background: linear-gradient(135deg, #fb7185, #be123c); }
+.swatch-desert::after  { background: linear-gradient(135deg, #a3e635, #4d7c0f); }
+.swatch-desert > i      { background: linear-gradient(135deg, #ea580c, #7c2d12); }
+
+.swatch-lava { background: linear-gradient(135deg, #ef4444, #7f1d1d); }
+.swatch-lava::before { background: linear-gradient(135deg, #fbbf24, #b45309); }
+.swatch-lava::after  { background: linear-gradient(135deg, #f97316, #7c2d12); }
+.swatch-lava > i      { background: linear-gradient(135deg, #18181b, #000000); }
+
 .start-btn {
   display: flex;
   align-items: center;
@@ -379,10 +516,10 @@ button:focus-visible { outline: 2px solid var(--accent-p1); outline-offset: 2px;
   background: transparent;
   border: 2px dashed transparent;
 }
-.cell.normal { background: linear-gradient(135deg, #4a90ff, #2563eb); }
-.cell.revive { background: linear-gradient(135deg, #ff8fb9, #d63384); }
-.cell.build  { background: linear-gradient(135deg, #4ade80, #16a34a); }
-.cell.kill   { background: linear-gradient(135deg, #ff6b6b, #c92020); }
+.cell.normal { background: var(--cell-normal); }
+.cell.revive { background: var(--cell-revive); }
+.cell.build  { background: var(--cell-build); }
+.cell.kill   { background: var(--cell-kill); }
 
 .cell.flipped {
   background: linear-gradient(135deg, #2a2a3e, #1a1a2e);
@@ -764,7 +901,7 @@ button:focus-visible { outline: 2px solid var(--accent-p1); outline-offset: 2px;
    ============================================================ */
 .cell.flipped {
   background:
-    repeating-linear-gradient(45deg, #1f1f3a 0 8px, #2a2a4a 8px 16px),
+    var(--cell-flipped-pattern),
     linear-gradient(135deg, #2a2a3e, #1a1a2e);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);

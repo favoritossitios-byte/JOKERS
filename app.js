@@ -20,6 +20,7 @@
     p1: { emojiIdx: 0, type: 'human' },
     p2: { emojiIdx: 1, type: 'bot' },
     mode: 1,
+    theme: 'normal',
     botDepth: 3,
   };
   let state = null;
@@ -120,6 +121,23 @@
     });
   });
 
+  $$('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.theme;
+      applyTheme(name);
+      safeSfx(SFX.click);
+    });
+  });
+
+  function applyTheme(name) {
+    ui.theme = name;
+    document.body.classList.remove('theme-normal', 'theme-jungle', 'theme-ocean', 'theme-desert', 'theme-lava');
+    if (name !== 'normal') document.body.classList.add('theme-' + name);
+    document.body.dataset.theme = name;
+    $$('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === name));
+    if (SFX.setTheme) SFX.setTheme(name);
+  }
+
   $('#start-btn').addEventListener('click', () => {
     safeSfx(SFX.start);
     switchScreen('game');
@@ -172,6 +190,7 @@
 
   paintEmojis();
   updateSfxButtonsUI();
+  applyTheme(ui.theme);
 
   // ============================================================
   // Game flow
