@@ -130,19 +130,29 @@
     return 1;
   }
 
-  // Limite de tempo para o bot — se a profundidade for alta, podemos cortar.
-  function chooseAction(state, depth = 10, timeLimitMs = 30000) {
+  // Limite de tempo para o bot. Cada nível de iterative deepening é
+  // intercalado com um setTimeout(0) yield, para o browser conseguir
+  // renderizar e responder a inputs entre passos (sem isto, a página
+  // congela enquanto o minimax corre).
+  async function chooseAction(state, depth = 4, timeLimitMs = 2500) {
     const maxPlayer = state.currentPlayer;
     const start = performance.now();
 
     let best = { score: -Infinity, action: null };
-    // Iterative deepening leve até atingir depth ou timeout
     for (let d = 1; d <= depth; d++) {
+      // Ceder o thread antes de cada nível — assim o status bar atualiza,
+      // animações continuam e o utilizador pode interagir.
+      await new Promise(r => setTimeout(r, 0));
+
       const r = minimax(state, d, -Infinity, Infinity, maxPlayer);
       if (r.action) best = r;
-      if (performance.now() - start > timeLimitMs) break;
+
+      const elapsed = performance.now() - start;
+      if (elapsed > timeLimitMs) break;
+      // Se já encontrou uma vitória decisiva, não vale a pena ir mais fundo
+      if (r.score >= 1e8 || r.score <= -1e8) break;
     }
-    // Fallback: se ainda assim nada, primeira ação legal
+
     if (!best.action) {
       const acts = JH.legalActions(state);
       if (acts.length) best = { action: acts[0], score: 0 };

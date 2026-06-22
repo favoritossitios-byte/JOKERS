@@ -670,7 +670,8 @@
     botBusy = true;
     try {
       await new Promise(r => setTimeout(r, 200));
-      const action = Bot.chooseAction(state, 10, 20000);
+      $status.innerHTML = `<span class="pill p${state.currentPlayer}">P${state.currentPlayer}</span> 🤖 a pensar…`;
+      const action = await Bot.chooseAction(state, 4, 2500);
       botBusy = false;
       if (action) performAction(action);
     } catch (e) {
