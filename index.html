@@ -75,6 +75,11 @@
       <span>JOGAR</span>
       <span class="arrow-icon">→</span>
     </button>
+
+    <div class="sound-row">
+      <button id="sfx-toggle" class="sound-btn active" title="Efeitos sonoros">🔊 SFX</button>
+      <button id="music-toggle" class="sound-btn" title="Música ambiente">🎵 Música</button>
+    </div>
   </section>
 
   <!-- ====================== GAME SCREEN ====================== -->
@@ -82,6 +87,7 @@
     <header class="game-header">
       <button id="back-btn" class="ghost-btn" title="Voltar ao menu">‹</button>
       <div id="status" class="status-bar"></div>
+      <button id="sfx-toggle-game" class="ghost-btn" title="Som on/off">🔊</button>
       <button id="log-toggle" class="ghost-btn" title="Mostrar/esconder log">📜</button>
     </header>
 
@@ -97,6 +103,8 @@
     </aside>
 
     <div id="fx-layer" class="fx-layer"></div>
+    <div id="screen-flash" class="screen-flash"></div>
+    <div id="combo-counter" class="combo-counter"></div>
 
     <!-- Game over overlay -->
     <div id="gameover-overlay" class="overlay hidden">
@@ -113,6 +121,7 @@
   </section>
 
   <script src="game.js"></script>
+  <script src="sound.js"></script>
   <script src="bot.js"></script>
   <script src="app.js"></script>
 </body>

@@ -131,7 +131,7 @@
   }
 
   // Limite de tempo para o bot — se a profundidade for alta, podemos cortar.
-  function chooseAction(state, depth = 3, timeLimitMs = 4000) {
+  function chooseAction(state, depth = 10, timeLimitMs = 30000) {
     const maxPlayer = state.currentPlayer;
     const start = performance.now();
 

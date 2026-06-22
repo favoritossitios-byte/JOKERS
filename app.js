@@ -42,6 +42,32 @@
   const $logPanel = $('#log-panel');
   const $fx = $('#fx-layer');
   const $overlay = $('#gameover-overlay');
+  const $screenFlash = $('#screen-flash');
+  const $combo = $('#combo-counter');
+
+  // ============================================================
+  // Sound integration
+  // ============================================================
+  const SFX = window.SFX || {};
+  function safeSfx(fn, ...args) { try { fn && fn(...args); } catch (e) { /* noop */ } }
+
+  function updateSfxButtonsUI() {
+    const sfxOn = SFX.enabled;
+    const mOn = SFX.musicEnabled;
+    const $b1 = $('#sfx-toggle');
+    const $b2 = $('#music-toggle');
+    const $b3 = $('#sfx-toggle-game');
+    if ($b1) $b1.classList.toggle('active', sfxOn);
+    if ($b2) $b2.classList.toggle('active', mOn);
+    if ($b3) $b3.textContent = sfxOn ? '🔊' : '🔇';
+  }
+
+  // hover sounds on interactive elements (delegated)
+  document.addEventListener('mouseover', (e) => {
+    const t = e.target.closest('button, .cell.legal, .cell.placeable, .cell.removable, .cell.revive-target, .cell.kill-target, .cell.build-target');
+    if (!t) return;
+    safeSfx(SFX.hover);
+  }, true);
 
   // ============================================================
   // Setup screen
@@ -65,6 +91,7 @@
 
   $$('.arrow').forEach(btn => {
     btn.addEventListener('click', () => {
+      safeSfx(SFX.click);
       const dir = parseInt(btn.dataset.dir);
       const p = btn.dataset.player;
       cycleEmoji(`p${p}`, dir);
@@ -75,6 +102,7 @@
     const p = toggle.dataset.player;
     toggle.querySelectorAll('.toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        safeSfx(SFX.click);
         toggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         ui[`p${p}`].type = btn.dataset.type;
@@ -85,6 +113,7 @@
   $$('.mode-btn').forEach(btn => {
     if (btn.classList.contains('locked')) return;
     btn.addEventListener('click', () => {
+      safeSfx(SFX.click);
       $$('.mode-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       ui.mode = parseInt(btn.dataset.mode);
@@ -92,24 +121,46 @@
   });
 
   $('#start-btn').addEventListener('click', () => {
+    safeSfx(SFX.start);
     switchScreen('game');
     newGame();
   });
 
   $('#back-btn').addEventListener('click', () => {
+    safeSfx(SFX.click);
     switchScreen('setup');
   });
 
   $('#log-toggle').addEventListener('click', () => {
+    safeSfx(SFX.click);
     $logPanel.classList.toggle('hidden');
   });
 
+  $('#sfx-toggle').addEventListener('click', () => {
+    SFX.setEnabled && SFX.setEnabled(!SFX.enabled);
+    safeSfx(SFX.click);
+    updateSfxButtonsUI();
+  });
+
+  $('#music-toggle').addEventListener('click', () => {
+    SFX.setMusicEnabled && SFX.setMusicEnabled(!SFX.musicEnabled);
+    safeSfx(SFX.click);
+    updateSfxButtonsUI();
+  });
+
+  $('#sfx-toggle-game').addEventListener('click', () => {
+    SFX.setEnabled && SFX.setEnabled(!SFX.enabled);
+    updateSfxButtonsUI();
+  });
+
   $('#play-again').addEventListener('click', () => {
+    safeSfx(SFX.start);
     $overlay.classList.add('hidden');
     newGame();
   });
 
   $('#to-menu').addEventListener('click', () => {
+    safeSfx(SFX.click);
     $overlay.classList.add('hidden');
     switchScreen('setup');
   });
@@ -120,6 +171,7 @@
   }
 
   paintEmojis();
+  updateSfxButtonsUI();
 
   // ============================================================
   // Game flow
@@ -224,6 +276,9 @@
               jEl.className = `joker p${player}`;
               if (player === state.currentPlayer && state.phase !== JH.PHASES.GAME_OVER) {
                 jEl.classList.add('current');
+                div.classList.add('has-current-joker');
+                div.style.setProperty('--aura-color',
+                  player === 1 ? 'var(--accent-p1)' : 'var(--accent-p2)');
               }
               jEl.textContent = getEmoji(player);
               div.appendChild(jEl);
@@ -329,16 +384,90 @@
 
   function confettiBurst() {
     const colors = ['#ffd60a', '#00f5d4', '#ff6fa1', '#2ecc71', '#ff4757', '#3a86ff'];
-    for (let i = 0; i < 80; i++) {
+    const shapes = ['', 'sq', 'tri'];
+    for (let i = 0; i < 120; i++) {
       const c = document.createElement('div');
-      c.className = 'confetti';
+      const shape = shapes[i % shapes.length];
+      c.className = 'confetti' + (shape ? ' ' + shape : '');
       c.style.left = Math.random() * 100 + 'vw';
-      c.style.background = colors[i % colors.length];
+      const color = colors[i % colors.length];
+      if (shape === 'tri') c.style.color = color;
+      else c.style.background = color;
       c.style.transform = `rotate(${Math.random() * 360}deg)`;
-      c.style.setProperty('--dur', (2.5 + Math.random() * 2) + 's');
+      c.style.setProperty('--dur', (2.5 + Math.random() * 2.5) + 's');
+      c.style.animationDelay = (Math.random() * 0.6) + 's';
       $fx.appendChild(c);
-      setTimeout(() => c.remove(), 5000);
+      setTimeout(() => c.remove(), 6000);
     }
+  }
+
+  // ============================================================
+  // Extra FX: screen flash, board shake, trails, combo
+  // ============================================================
+  function screenFlash(color, duration = 500) {
+    $screenFlash.style.background = `radial-gradient(circle at center, ${color}, transparent 70%)`;
+    $screenFlash.classList.remove('flash');
+    void $screenFlash.offsetWidth;
+    $screenFlash.classList.add('flash');
+    setTimeout(() => $screenFlash.classList.remove('flash'), duration);
+  }
+
+  function boardShake() {
+    $board.classList.remove('shake');
+    void $board.offsetWidth;
+    $board.classList.add('shake');
+    setTimeout(() => $board.classList.remove('shake'), 500);
+  }
+
+  function trail(fromX, fromY, toX, toY, color) {
+    const r1 = cellRect(fromX, fromY);
+    const r2 = cellRect(toX, toY);
+    if (!r1 || !r2) return;
+    const x1 = r1.left + r1.width / 2;
+    const y1 = r1.top + r1.height / 2;
+    const x2 = r2.left + r2.width / 2;
+    const y2 = r2.top + r2.height / 2;
+    const N = 8;
+    for (let i = 0; i < N; i++) {
+      const t = i / N;
+      const dot = document.createElement('div');
+      dot.className = 'trail-dot';
+      dot.style.left = (x1 + (x2 - x1) * t - 7) + 'px';
+      dot.style.top = (y1 + (y2 - y1) * t - 7) + 'px';
+      dot.style.background = color;
+      dot.style.animationDelay = (i * 30) + 'ms';
+      $fx.appendChild(dot);
+      setTimeout(() => dot.remove(), 1000);
+    }
+  }
+
+  // Combo: count rapid successive actions for the same player
+  let comboCount = 0;
+  let comboTimer = null;
+  let comboLastPlayer = null;
+  function bumpCombo(player) {
+    if (player !== comboLastPlayer) { comboCount = 0; }
+    comboLastPlayer = player;
+    comboCount++;
+    if (comboTimer) clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => { comboCount = 0; comboLastPlayer = null; }, 1800);
+    if (comboCount >= 3) {
+      const labels = ['', '', '', '🔥 COMBO ×3', '⚡ COMBO ×4', '💥 COMBO ×5', '🌟 INSANE ×6', '🚀 LEGENDARY ×7'];
+      const label = labels[Math.min(comboCount, labels.length - 1)];
+      $combo.textContent = label;
+      $combo.classList.remove('show');
+      void $combo.offsetWidth;
+      $combo.classList.add('show');
+    }
+  }
+
+  function rippleCell(x, y) {
+    const el = $board.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+    if (!el) return;
+    el.classList.remove('ripple');
+    void el.offsetWidth;
+    el.classList.add('ripple');
+    setTimeout(() => el.classList.remove('ripple'), 500);
   }
 
   // ============================================================
@@ -361,6 +490,9 @@
     const cellTypeBefore = cellBefore ? cellBefore.type : null;
     const jokerBefore = state.jokers[playerBefore] ? { ...state.jokers[playerBefore] } : null;
 
+    // count move steps so the SFX pitch ascends across the 3 hops
+    const moveStepIdx = (action.kind === 'move') ? (JH.MOVE_STEPS - state.moveStepsRemaining) : 0;
+
     // Pre-effect FX
     const animations = {};
     if (action.kind === 'pick') {
@@ -378,36 +510,59 @@
     // Re-render with anim markers
     render({ animations });
 
-    // FX bursts (after render so cellRect works)
+    // FX bursts and sound (after render so cellRect works)
     requestAnimationFrame(() => {
+      rippleCell(action.x, action.y);
+      const playerColor = getEmojiColor(playerBefore);
+
       if (action.kind === 'place') {
-        burst(action.x, action.y, getEmojiColor(playerBefore));
+        safeSfx(SFX.place);
+        burst(action.x, action.y, playerColor);
+        screenFlash(playerBefore === 1 ? 'rgba(255, 214, 10, 0.4)' : 'rgba(0, 245, 212, 0.4)', 400);
       } else if (action.kind === 'move' && jokerBefore) {
-        // hop trail
+        safeSfx(SFX.move, moveStepIdx);
         const j = $board.querySelector(`.cell[data-x="${action.x}"][data-y="${action.y}"] .joker.p${playerBefore}`);
         if (j) { j.classList.add('moving'); setTimeout(() => j.classList.remove('moving'), 400); }
+        trail(jokerBefore.x, jokerBefore.y, action.x, action.y, playerColor);
         burst(jokerBefore.x, jokerBefore.y, 'rgba(255, 255, 255, 0.4)');
+        bumpCombo(playerBefore);
       } else if (action.kind === 'pick') {
-        if (cellTypeBefore === 'revive') { burst(action.x, action.y, 'var(--accent-pink)'); floatText(action.x, action.y, 'NORMAL', '#fff'); }
-        else if (cellTypeBefore === 'build') { burst(action.x, action.y, 'var(--accent-green)'); }
-        else if (cellTypeBefore === 'kill') { burst(action.x, action.y, 'var(--accent-red)'); }
-        else { burst(action.x, action.y, 'rgba(255, 255, 255, 0.3)'); }
+        safeSfx(SFX.pick);
+        if (cellTypeBefore === 'revive') burst(action.x, action.y, 'var(--accent-pink)');
+        else if (cellTypeBefore === 'build') burst(action.x, action.y, 'var(--accent-green)');
+        else if (cellTypeBefore === 'kill') burst(action.x, action.y, 'var(--accent-red)');
+        else burst(action.x, action.y, 'rgba(255, 255, 255, 0.3)');
 
-        // Detect activated effect (under joker)
+        // Detect activated effect (under joker AFTER move/pick)
         const j = state.jokers[playerBefore];
         const under = JH.cellAt(state, j.x, j.y);
         if (under && under.faceUp) {
-          if (under.type === 'revive') floatText(j.x, j.y, '💖 REVIVE', '#ff6fa1');
-          else if (under.type === 'build') floatText(j.x, j.y, '🌱 BUILD', '#2ecc71');
-          else if (under.type === 'kill') floatText(j.x, j.y, '💀 KILL', '#ff4757');
+          if (under.type === 'revive') {
+            floatText(j.x, j.y, '💖 REVIVE', '#ff6fa1');
+            safeSfx(SFX.revive);
+            screenFlash('rgba(255, 111, 161, 0.35)', 600);
+          } else if (under.type === 'build') {
+            floatText(j.x, j.y, '🌱 BUILD', '#2ecc71');
+            safeSfx(SFX.build);
+            screenFlash('rgba(46, 204, 113, 0.3)', 600);
+          } else if (under.type === 'kill') {
+            floatText(j.x, j.y, '💀 KILL', '#ff4757');
+            safeSfx(SFX.kill);
+            screenFlash('rgba(255, 71, 87, 0.45)', 700);
+            boardShake();
+          }
         }
       } else if (action.kind === 'revive') {
+        safeSfx(SFX.revive);
         burst(action.x, action.y, '#ff6fa1');
         floatText(action.x, action.y, '✨', '#ff6fa1');
       } else if (action.kind === 'kill') {
+        safeSfx(SFX.kill);
         burst(action.x, action.y, '#ff4757');
         floatText(action.x, action.y, '☠', '#ff4757');
+        boardShake();
       } else if (action.kind === 'build') {
+        safeSfx(SFX.build);
         burst(action.x, action.y, '#2ecc71');
       }
     });
@@ -447,7 +602,7 @@
     botBusy = true;
     try {
       await new Promise(r => setTimeout(r, 200));
-      const action = Bot.chooseAction(state, ui.botDepth, 4000);
+      const action = Bot.chooseAction(state, 10, 20000);
       botBusy = false;
       if (action) performAction(action);
     } catch (e) {
@@ -465,11 +620,21 @@
       emojiEl.textContent = '🤝';
       titleEl.textContent = 'Empate!';
       subEl.textContent = 'Nenhum dos jogadores consegue andar.';
+      safeSfx(SFX.draw);
     } else {
       emojiEl.textContent = getEmoji(state.winner);
       titleEl.textContent = `Jogador ${state.winner} venceu!`;
       subEl.textContent = `O adversário ficou sem espaço para andar.`;
+      // Did the human win? Play win, else lose
+      const winnerType = getType(state.winner);
+      const loserType = getType(state.winner === 1 ? 2 : 1);
+      if (winnerType === 'human' || (winnerType === 'bot' && loserType === 'bot')) {
+        safeSfx(SFX.win);
+      } else {
+        safeSfx(SFX.lose);
+      }
       confettiBurst();
+      screenFlash(state.winner === 1 ? 'rgba(255, 214, 10, 0.5)' : 'rgba(0, 245, 212, 0.5)', 800);
     }
     setTimeout(() => $overlay.classList.remove('hidden'), 800);
   }
