@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Joker Hop</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>🃏 Joker Hop</h1>
+    <div class="controls">
+      <label>P1:
+        <select id="p1-type">
+          <option value="human" selected>Humano</option>
+          <option value="bot">Bot</option>
+        </select>
+      </label>
+      <label>P2:
+        <select id="p2-type">
+          <option value="human">Humano</option>
+          <option value="bot" selected>Bot</option>
+        </select>
+      </label>
+      <label>Bot depth:
+        <input type="number" id="bot-depth" value="3" min="1" max="6" />
+      </label>
+      <button id="new-game">Novo Jogo</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="status" class="status"></div>
+    <div id="board-wrap">
+      <div id="board"></div>
+    </div>
+    <aside id="log-panel">
+      <h3>Log</h3>
+      <ul id="log"></ul>
+    </aside>
+  </main>
+
+  <section class="legend">
+    <h3>Legenda</h3>
+    <ul>
+      <li><span class="chip normal"></span> Normal (40/52)</li>
+      <li><span class="chip revive"></span> Ressuscitar (4/52) — vira de novo uma carta para cima</li>
+      <li><span class="chip build"></span> Construir (4/52) — adiciona 2 cartas ao tabuleiro</li>
+      <li><span class="chip kill"></span> Mortal (4/52) — vira mais uma carta para baixo</li>
+      <li><span class="chip flipped"></span> Virada para baixo (intransponível)</li>
+    </ul>
+    <p><strong>Regras:</strong> Cada turno, o jogador anda exatamente 3 passos (cima/baixo/esq/dir, sem diagonal, sem passar por cima do adversário nem sair do tabuleiro) e depois remove uma carta à sua escolha. Cartas especiais ativam efeitos. Quem não conseguir andar perde. Se nenhum conseguir, empate.</p>
+  </section>
+
+  <script src="game.js"></script>
+  <script src="bot.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
